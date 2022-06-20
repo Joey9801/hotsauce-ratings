@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "csstools.postcss",
+        "vue.volar",
+        "bradlc.vscode-tailwindcss",
+        "rust-lang.rust-analyzer"
+    ]
+}

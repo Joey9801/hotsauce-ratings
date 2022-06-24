@@ -4,24 +4,22 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "rating_axis")]
+#[sea_orm(table_name = "manufacturer")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub rating_axis_id: i32,
-    pub rating_axis_name: String,
-    pub min_value_desc: String,
-    pub max_value_desc: String,
+    pub id: i32,
+    pub name: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::review_rating::Entity")]
-    ReviewRating,
+    #[sea_orm(has_many = "super::sauce::Entity")]
+    Sauce,
 }
 
-impl Related<super::review_rating::Entity> for Entity {
+impl Related<super::sauce::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::ReviewRating.def()
+        Relation::Sauce.def()
     }
 }
 

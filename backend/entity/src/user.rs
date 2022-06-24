@@ -4,22 +4,25 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "manufacturer")]
+#[sea_orm(table_name = "user")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub manufacturer_id: i32,
-    pub manufacturer_name: String,
+    pub id: i32,
+    pub name: String,
+    pub given_name: String,
+    pub family_name: String,
+    pub email: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::sauce::Entity")]
-    Sauce,
+    #[sea_orm(has_many = "super::review::Entity")]
+    Review,
 }
 
-impl Related<super::sauce::Entity> for Entity {
+impl Related<super::review::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::Sauce.def()
+        Relation::Review.def()
     }
 }
 

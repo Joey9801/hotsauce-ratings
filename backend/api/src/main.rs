@@ -12,10 +12,9 @@ use tower::ServiceBuilder;
 use tower_http::cors::CorsLayer;
 
 mod error;
-mod model;
 
 use crate::error::Result;
-use model::prelude::*;
+use entity::prelude::*;
 
 async fn manufacturer_list(
     Extension(ref conn): Extension<DatabaseConnection>,
@@ -29,22 +28,22 @@ async fn manufacturer_list(
 
 #[derive(Deserialize, Debug)]
 struct NewManufacturer {
-    pub manufacturer_name: String
+    pub name: String
 }
 
 async fn manufacturer_insert(
     Extension(ref conn): Extension<DatabaseConnection>,
     Json(new): Json<NewManufacturer>,
 ) -> Result<impl IntoResponse> { 
-    model::manufacturer::ActiveModel {
-        manufacturer_name: Set(new.manufacturer_name.clone()),
+    entity::manufacturer::ActiveModel {
+        name: Set(new.name.clone()),
         ..Default::default()
     }
     .save(conn)
     .await?;
     
     let inserted = Manufacturer::find()
-        .filter(model::manufacturer::Column::ManufacturerName.eq(new.manufacturer_name))
+        .filter(entity::manufacturer::Column::Name.eq(new.name))
         .one(conn)
         .await?
         .ok_or(anyhow!("Can't find manufacturer that was just inserted"))?;
@@ -74,11 +73,11 @@ async fn sauce_list(
     let mut find = Sauce::find();
     
     if let Some(manufacturer_id) = query.manufacturer_id {
-        find = find.filter(model::sauce::Column::ManufacturerId.eq(manufacturer_id));
+        find = find.filter(entity::sauce::Column::Manufacturer.eq(manufacturer_id));
     }
 
     if let Some(sauce_id) = query.sauce_id {
-        find = find.filter(model::sauce::Column::SauceId.eq(sauce_id));
+        find = find.filter(entity::sauce::Column::Id.eq(sauce_id));
     }
     
     find

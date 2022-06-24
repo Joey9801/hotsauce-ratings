@@ -4,13 +4,13 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "review")]
+#[sea_orm(table_name = "rating_axis")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub review_id: i32,
-    pub user_id: i32,
-    pub sauce_id: i32,
-    pub review_timestamp: DateTimeUtc,
+    pub id: i32,
+    pub name: String,
+    pub min_value_desc: String,
+    pub max_value_desc: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

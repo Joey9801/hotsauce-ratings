@@ -5,4 +5,5 @@ pub use super::rating_axis::Entity as RatingAxis;
 pub use super::review::Entity as Review;
 pub use super::review_rating::Entity as ReviewRating;
 pub use super::sauce::Entity as Sauce;
+pub use super::seaql_migrations::Entity as SeaqlMigrations;
 pub use super::user::Entity as User;

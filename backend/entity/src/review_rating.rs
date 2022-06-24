@@ -7,9 +7,9 @@ use serde::{Deserialize, Serialize};
 #[sea_orm(table_name = "review_rating")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub rating_id: i32,
-    pub review_id: i32,
-    pub rating_axis_id: i32,
+    pub id: i32,
+    pub review: i32,
+    pub rating_axis: i32,
     pub rating: Decimal,
 }
 
@@ -17,16 +17,16 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(
         belongs_to = "super::rating_axis::Entity",
-        from = "Column::RatingAxisId",
-        to = "super::rating_axis::Column::RatingAxisId",
+        from = "Column::RatingAxis",
+        to = "super::rating_axis::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
     )]
     RatingAxis,
     #[sea_orm(
         belongs_to = "super::review::Entity",
-        from = "Column::ReviewId",
-        to = "super::review::Column::ReviewId",
+        from = "Column::Review",
+        to = "super::review::Column::Id",
         on_update = "NoAction",
         on_delete = "NoAction"
     )]

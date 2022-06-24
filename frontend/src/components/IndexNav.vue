@@ -7,8 +7,9 @@ import IndexNavButton from './IndexNavButton.vue';
     <IndexNavButton label="Home" link="/" />
     <IndexNavButton label="Sauces" link="/sauces" />
     <IndexNavButton label="Submit review" link="/review/submit" />
-    <div class="ml-auto">
+    <div class="ml-auto flex">
     <IndexNavButton label="About" link="/about" />
+    <IndexNavButton label="Login" link="/login" />
     </div>
   </ul>
 </template>

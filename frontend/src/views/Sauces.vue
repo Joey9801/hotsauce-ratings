@@ -21,14 +21,14 @@ export default {
     },
     mounted() {
         axios
-            .get("http://localhost:3030/api/sauce")
+            .get("/api/v1/sauce")
             .then(response => {
                 this.sauces = response.data;
                 this.loadingSauces = false;
             })
 
         axios
-            .get("http://localhost:3030/api/manufacturer")
+            .get("/api/v1/manufacturer")
             .then(response => {
                 response.data.forEach(m => {
                     this.manufacturers[m.manufacturer_id] = m.manufacturer_name

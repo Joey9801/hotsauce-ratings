@@ -10,6 +10,7 @@ export default {
         return {
             google_oidc_config: {},
             google_client_id: "1029137063431-crnebmaeal8jdm85iurqoin9k6aqvccj.apps.googleusercontent.com",
+            logged_in_name: null,
         }
     },
     mounted() {
@@ -18,6 +19,10 @@ export default {
             .then(response => {
                 this.google_oidc_config = response.data;
             })
+            
+        axios
+            .get("/api/v1/my_name")
+            .then(response => this.logged_in_name = response.data)
     },
     methods: {
         doGoogleLogin() {
@@ -41,6 +46,9 @@ export default {
 
 <template>
     <h1 class="text-5xl font-bold pb-10">Login</h1>
+
+    <h1 class="text-3xl font-bold p-10">Logged in name:</h1>
+    <p>{{ logged_in_name ?? "not logged in" }}</p>
 
     <h1 class="text-3xl font-bold p-10">Google OIDC config</h1>
     <table class="table-auto">
@@ -78,6 +86,10 @@ export default {
             <tr>
                 <td>access_token</td>
                 <td>{{ loginState.access_token ?? "null" }}</td>
+            </tr>
+            <tr>
+                <td>id_token</td>
+                <td>{{ loginState.id_token ?? "null" }}</td>
             </tr>
         </tbody>
     </table>

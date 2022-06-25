@@ -1,12 +1,10 @@
-use anyhow::anyhow;
-use axum::{Extension, response::IntoResponse, Json, Router, routing::get};
+use axum::{response::IntoResponse, routing::get, Extension, Json, Router};
 use sea_orm::{prelude::*, Set};
 
 use entity::prelude::*;
 use serde::Deserialize;
 
 use crate::error::{Error, Result};
-
 
 async fn manufacturer_list(
     Extension(ref conn): Extension<DatabaseConnection>,
@@ -20,29 +18,30 @@ async fn manufacturer_list(
 
 #[derive(Deserialize, Debug)]
 struct NewManufacturer {
-    pub name: String
+    pub name: String,
 }
 
 async fn manufacturer_insert(
     Extension(ref conn): Extension<DatabaseConnection>,
     Json(new): Json<NewManufacturer>,
-) -> Result<impl IntoResponse> { 
-    entity::manufacturer::ActiveModel {
-        name: Set(new.name.clone()),
-        ..Default::default()
-    }
-    .save(conn)
-    .await?;
-    
-    let inserted = Manufacturer::find()
-        .filter(entity::manufacturer::Column::Name.eq(new.name))
+) -> Result<impl IntoResponse> {
+    if let Some(existing) = Manufacturer::find()
+        .filter(entity::manufacturer::Column::Name.eq(new.name.clone()))
         .one(conn)
         .await?
-        .ok_or(anyhow!("Can't find manufacturer that was just inserted"))?;
+    {
+        return Ok(Json(existing));
+    }
+
+    let inserted = entity::manufacturer::ActiveModel {
+        name: Set(new.name),
+        ..Default::default()
+    }
+    .insert(conn)
+    .await?;
 
     Ok(Json(inserted))
 }
-
 
 pub fn router() -> Router {
     Router::new().route(

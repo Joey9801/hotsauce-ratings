@@ -19,6 +19,13 @@ pub enum User {
 }
 
 #[derive(Iden)]
+pub enum UserGoogleLogin {
+    Table,
+    User,
+    GoogleId,
+}
+
+#[derive(Iden)]
 pub enum Manufacturer {
     Table,
     Id,
@@ -85,6 +92,26 @@ impl MigrationTrait for Migration {
         manager
             .create_table(
                 Table::create()
+                    .table(UserGoogleLogin::Table)
+                    .col(
+                        ColumnDef::new(UserGoogleLogin::GoogleId)
+                            .string()
+                            .not_null()
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(UserGoogleLogin::User).integer().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(UserGoogleLogin::Table, UserGoogleLogin::User)
+                            .to(User::Table, User::Id),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
                     .table(Manufacturer::Table)
                     .col(
                         ColumnDef::new(Manufacturer::Id)
@@ -114,7 +141,7 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Sauce::Table, Sauce::Manufacturer)
-                            .to(Manufacturer::Table, Manufacturer::Id)
+                            .to(Manufacturer::Table, Manufacturer::Id),
                     )
                     .to_owned(),
             )
@@ -153,13 +180,13 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(Review::Table, Review::Sauce)
-                            .to(Sauce::Table, Sauce::Id)
+                            .to(Sauce::Table, Sauce::Id),
                     )
                     .col(ColumnDef::new(Review::User).integer().not_null())
                     .foreign_key(
                         ForeignKey::create()
                             .from(Review::Table, Review::User)
-                            .to(User::Table, User::Id)
+                            .to(User::Table, User::Id),
                     )
                     .col(ColumnDef::new(Review::Timestamp).timestamp().not_null())
                     .to_owned(),
@@ -181,13 +208,17 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(ReviewRating::Table, ReviewRating::Review)
-                            .to(Review::Table, Review::Id)
+                            .to(Review::Table, Review::Id),
                     )
-                    .col(ColumnDef::new(ReviewRating::RatingAxis).integer().not_null())
+                    .col(
+                        ColumnDef::new(ReviewRating::RatingAxis)
+                            .integer()
+                            .not_null(),
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .from(ReviewRating::Table, ReviewRating::RatingAxis)
-                            .to(RatingAxis::Table, RatingAxis::Id)
+                            .to(RatingAxis::Table, RatingAxis::Id),
                     )
                     .col(ColumnDef::new(ReviewRating::Rating).float().not_null())
                     .to_owned(),
@@ -215,11 +246,7 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_table(
-                Table::drop()
-                    .table(Manufacturer::Table)
-                    .to_owned(),
-            )
+            .drop_table(Table::drop().table(Manufacturer::Table).to_owned())
             .await?;
 
         manager

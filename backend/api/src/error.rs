@@ -1,6 +1,9 @@
-use axum::{response::IntoResponse, http::StatusCode};
+use axum::{http::StatusCode, response::IntoResponse};
 use thiserror::Error;
 
+use crate::auth::TokenValidationError;
+
+#[allow(dead_code)]
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("A database error occurred")]
@@ -11,26 +14,38 @@ pub enum Error {
 
     #[error("An internal server error occurred")]
     Anyhow(#[from] anyhow::Error),
+
+    #[error("An error occured while validating a token")]
+    TokenValidationError(#[from] TokenValidationError),
+
+    #[error("Login required to perform this action")]
+    Unauthorized,
+
+    #[error("The given credentials were insufficient to perform this action")]
+    Forbidden,
 }
 
 impl Error {
     fn status_code(&self) -> StatusCode {
         match self {
-            Error::Sqlx(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::SeaORM(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            Error::Anyhow(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            Error::TokenValidationError(e) => {
+                use TokenValidationError::*;
+                match e {
+                    JsonWebToken(_) => StatusCode::UNAUTHORIZED,
+                    MissingKid | UnknownKey => StatusCode::BAD_REQUEST,
+                    Reqwest(_) | UnsupportedKeyAlgorithm(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                }
+            }
+            Error::Unauthorized => StatusCode::UNAUTHORIZED,
+            Error::Forbidden => StatusCode::FORBIDDEN,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
 }
 
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
-        match &self {
-            Error::Sqlx(e) => log::error!("SQLx error: {:?}", e),
-            Error::SeaORM(e) => log::error!("SeaORM error: {:?}", e),
-            Error::Anyhow(e) => log::error!("Generic server error: {:?}", e),
-        }
-
+        log::error!("{self:?}");
         (self.status_code(), self.to_string()).into_response()
     }
 }

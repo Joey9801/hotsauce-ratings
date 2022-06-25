@@ -85,18 +85,18 @@ async fn validate_token(token: &str) -> std::result::Result<Claims, TokenValidat
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-struct LoginCookieData {
-    user_id: i32,
-    logged_in_at: DateTime<Utc>,
-    valid_until: DateTime<Utc>,
+pub struct LoginCookieData {
+    pub user_id: i32,
+    pub logged_in_at: DateTime<Utc>,
+    pub valid_until: DateTime<Utc>,
 }
 
 impl LoginCookieData {
-    fn encode_cookie_str(&self) -> String {
+    pub fn encode_cookie_str(&self) -> String {
         serde_json::to_string(self).unwrap()
     }
 
-    fn decode_cookie_str(s: &str) -> Option<Self> {
+    pub fn decode_cookie_str(s: &str) -> Option<Self> {
         serde_json::from_str(s).ok()
     }
 }

@@ -9,6 +9,7 @@ use tower_http::trace::TraceLayer;
 mod auth;
 mod error;
 mod manufacturer;
+mod profile;
 mod sauce;
 
 async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
@@ -27,9 +28,10 @@ async fn handle_timeout_error(err: BoxError) -> (StatusCode, String) {
 
 fn api_router() -> Router {
     Router::new()
-        .merge(manufacturer::router())
-        .merge(sauce::router())
         .merge(auth::router())
+        .merge(manufacturer::router())
+        .merge(profile::router())
+        .merge(sauce::router())
 }
 
 #[tokio::main]

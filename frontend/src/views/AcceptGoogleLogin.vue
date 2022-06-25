@@ -1,33 +1,28 @@
 <script setup>
 import axios from 'axios';
-import { inject } from 'vue'
 import LoadingSpinner from '../components/LoadingSpinner.vue';
-const loginState = inject('loginState');
 </script>
 
 <script>
 export default {
+  inject: ['loginState'],
   mounted() {
     let hash = window.location.hash;
     if (hash.length <= 0) {
       return
     }
     let params = new URLSearchParams(hash.slice(1))
-    if (params.get("state") == "google") {
-      this.loginState.provider = "google"
-      this.loginState.access_token = params.get("access_token")
-      this.loginState.id_token = params.get("id_token")
-      this.loginState.isLoggedIn = true
 
-      axios.post("/api/v1/login", { google_access_token: params.get("id_token") })
-        .then(_ => {
-          axios.get("/api/v1/my_name")
-            .then(response => console.log(response))
-        })
-
-      this.$router.push("/login")
-    }
-    
+    console.log(this.loginState)
+    axios.post("/api/v1/login", { google_access_token: params.get("id_token") })
+      .then(_ => {
+        this.loginState.isLoggedIn = true;
+        return axios.get("/api/v1/basic_profile");
+      })
+      .then(response => {
+        this.loginState.profile = response.data
+        this.$router.push("/profile")
+      })
   }
 }
 </script>

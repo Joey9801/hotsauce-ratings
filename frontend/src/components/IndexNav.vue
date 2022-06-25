@@ -4,7 +4,7 @@ import IndexNavButton from './IndexNavButton.vue';
 
 <script>
 export default {
-  inject: ['loginState']
+  inject: ['login_state']
 }
 </script>
 
@@ -12,11 +12,11 @@ export default {
   <ul class="flex border-b px-5 pt-5">
     <IndexNavButton label="Home" link="/" />
     <IndexNavButton label="Sauces" link="/sauces" />
-    <IndexNavButton label="Submit review" link="/review/submit" />
+    <IndexNavButton v-if="login_state.is_logged_in" label="Submit review" link="/review/submit" />
     <div class="ml-auto flex">
     <IndexNavButton label="About" link="/about" />
 
-    <IndexNavButton v-if="loginState.isLoggedIn" label="Profile" link="/profile" />
+    <IndexNavButton v-if="login_state.is_logged_in" label="Profile" link="/profile" />
     <IndexNavButton v-else label="Login" link="/login" />
     </div>
   </ul>

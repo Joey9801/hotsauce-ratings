@@ -1,11 +1,11 @@
 <script setup>
 import axios from 'axios';
 import { inject } from 'vue'
-const loginState = inject('loginState');
 </script>
 
 <script>
 export default {
+    inject: ["login_state"],
     data() {
         return {
             google_oidc_config: {
@@ -15,7 +15,7 @@ export default {
         }
     },
     methods: {
-        doGoogleLogin() {
+        do_google_login() {
             var urlParams = {
                 client_id: this.google_oidc_config.client_id,
                 redirect_uri: new URL(window.location.href).origin + "/acceptGoogleLogin",
@@ -37,7 +37,7 @@ export default {
 <template>
     <div class="flex">
         <button class="mx-auto mt-5 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            @click="doGoogleLogin">Login with google</button>
+            @click="do_google_login">Login with google</button>
     </div>
 </template>
 

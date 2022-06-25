@@ -1,7 +1,8 @@
-use axum::{http::StatusCode, response::IntoResponse};
+use axum::{http::StatusCode, response::IntoResponse, Json};
 use thiserror::Error;
+use serde_json::json;
 
-use crate::auth::TokenValidationError;
+use crate::auth::{TokenValidationError, UsernameValidationError};
 
 #[allow(dead_code)]
 #[derive(Error, Debug)]
@@ -17,6 +18,12 @@ pub enum Error {
 
     #[error("An error occured while validating a token")]
     TokenValidationError(#[from] TokenValidationError),
+    
+    #[error("There was an issue with a potential new username")]
+    UsernameValidationError(#[from] UsernameValidationError),
+
+    #[error("No account exists for the given credentials")]
+    NoSuchAccount,
 
     #[error("Login required to perform this action")]
     Unauthorized,
@@ -36,9 +43,17 @@ impl Error {
                     Reqwest(_) | UnsupportedKeyAlgorithm(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 }
             }
-            Error::Unauthorized => StatusCode::UNAUTHORIZED,
+            Error::Unauthorized | Error::NoSuchAccount => StatusCode::UNAUTHORIZED,
+            Error::UsernameValidationError(_) => StatusCode::BAD_REQUEST,
             Error::Forbidden => StatusCode::FORBIDDEN,
             _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+    
+    fn detailed_message(&self) -> Option<String> {
+        match self {
+            Error::UsernameValidationError(e) => Some(e.to_string()),
+            _ => None,
         }
     }
 }
@@ -46,7 +61,12 @@ impl Error {
 impl IntoResponse for Error {
     fn into_response(self) -> axum::response::Response {
         log::error!("{self:?}");
-        (self.status_code(), self.to_string()).into_response()
+        let msg = json!({
+            "error": self.to_string(),
+            "details": self.detailed_message(),
+        });
+
+        (self.status_code(), Json(msg)).into_response()
     }
 }
 

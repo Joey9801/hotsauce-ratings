@@ -1,13 +1,13 @@
 <script setup>
 import { inject } from 'vue'
-const loginState = inject('loginState');
+const login_state = inject('login_state');
 </script>
 
 <template>
     <h1 class="text-3xl font-bold p-10">Profile</h1>
     <table class="table-auto">
         <tbody class="bg-white dark:bg-slate-800">
-            <tr v-for="(value, prop) in loginState.profile" :key="prop">
+            <tr v-for="(value, prop) in login_state.profile" :key="prop">
                 <td>{{ prop }}</td>
                 <td>{{ value }}</td>
             </tr>

@@ -12,10 +12,7 @@ impl MigrationName for Migration {
 pub enum User {
     Table,
     Id,
-    Name,
-    GivenName,
-    FamilyName,
-    Email,
+    Username,
 }
 
 #[derive(Iden)]
@@ -81,10 +78,7 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(User::Name).string().not_null())
-                    .col(ColumnDef::new(User::GivenName).string().not_null())
-                    .col(ColumnDef::new(User::FamilyName).string().not_null())
-                    .col(ColumnDef::new(User::Email).string().not_null())
+                    .col(ColumnDef::new(User::Username).string().not_null().unique_key())
                     .to_owned(),
             )
             .await?;
@@ -247,6 +241,10 @@ impl MigrationTrait for Migration {
 
         manager
             .drop_table(Table::drop().table(Manufacturer::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(UserGoogleLogin::Table).to_owned())
             .await?;
 
         manager

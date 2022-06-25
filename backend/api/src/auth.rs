@@ -8,13 +8,13 @@ use axum_extra::extract::{
     PrivateCookieJar,
 };
 use chrono::{DateTime, Duration, Utc};
-use entity::prelude::*;
+use entity::{prelude::*, user};
 use jsonwebtoken::{
     decode_header,
     jwk::{AlgorithmParameters, JwkSet},
     DecodingKey, Validation,
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, Set};
+use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, Set, ColumnTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -103,13 +103,11 @@ impl LoginCookieData {
 
 async fn create_user(
     conn: &DatabaseConnection,
-    claims: &Claims,
+    google_id: String,
+    username: String,
 ) -> std::result::Result<i32, DbErr> {
     let new_user = entity::user::ActiveModel {
-        name: Set(claims.name.clone()),
-        given_name: Set(claims.given_name.clone()),
-        family_name: Set(claims.family_name.clone()),
-        email: Set(claims.email.clone()),
+        username: Set(username),
         ..Default::default()
     }
     .insert(conn)
@@ -117,7 +115,7 @@ async fn create_user(
 
     entity::user_google_login::ActiveModel {
         user: Set(new_user.id),
-        google_id: Set(claims.sub.clone()),
+        google_id: Set(google_id),
     }
     .insert(conn)
     .await?;
@@ -125,38 +123,13 @@ async fn create_user(
     Ok(new_user.id)
 }
 
-async fn get_user_id(
-    conn: &DatabaseConnection,
-    claims: &Claims,
-) -> std::result::Result<i32, DbErr> {
-    let google_id = &claims.sub;
-
-    match UserGoogleLogin::find_by_id(google_id.clone())
-        .one(conn)
-        .await?
-    {
-        Some(ugl) => Ok(ugl.user),
-        None => create_user(conn, claims).await,
-    }
-}
-
-#[derive(Debug, Deserialize)]
-struct LoginQueryParams {
-    google_access_token: String,
-}
-
-async fn login(
-    Extension(ref conn): Extension<DatabaseConnection>,
-    jar: PrivateCookieJar,
-    Json(params): Json<LoginQueryParams>,
-) -> Result<impl IntoResponse> {
-    let claims = validate_token(&params.google_access_token).await?;
-
-    let now = Utc::now();
+fn do_login(user_id: i32, jar: PrivateCookieJar) -> Result<impl IntoResponse> {
+    let logged_in_at = Utc::now();
+    let valid_until = logged_in_at + Duration::days(7);
     let cookie_data = LoginCookieData {
-        user_id: get_user_id(conn, &claims).await?,
-        logged_in_at: now,
-        valid_until: now + Duration::days(7),
+        user_id,
+        logged_in_at,
+        valid_until,
     };
 
     let login_cookie = Cookie::build("login_cookie", cookie_data.encode_cookie_str())
@@ -170,6 +143,101 @@ async fn login(
     Ok((jar, "Successful login"))
 }
 
+const MIN_USERNAME_LEN: usize = 5;
+const MAX_USERNAME_LEN: usize = 25;
+
+#[derive(Error, Debug)]
+pub enum UsernameValidationError {
+    #[error("Usernames must be at least {} characters long", MIN_USERNAME_LEN)]
+    TooShort,
+
+    #[error("Usernames must be less than {} characters long", MAX_USERNAME_LEN)]
+    TooLong,
+
+    #[error("Usernames must contain only lowercase letters, numbers, hyphens, and underscores")]
+    IllegalCharacters,
+    
+    #[error("Username already in use")]
+    AlreadyTaken,
+}
+
+fn validate_potential_username(username: &str) -> std::result::Result<(), UsernameValidationError> {
+    if username
+        .chars()
+        .any(|c| match c {
+            'a'..='z' | '0'..='9' | '-' | '_' => false,
+            _ => true
+        })
+    {
+        return Err(UsernameValidationError::IllegalCharacters);
+    }
+    
+    if username.len() < MIN_USERNAME_LEN {
+        return Err(UsernameValidationError::TooShort);
+    }
+    if username.len() > MAX_USERNAME_LEN {
+        return Err(UsernameValidationError::TooLong);
+    }
+        
+    Ok(())
+}
+
+
+#[derive(Debug, Deserialize)]
+struct LoginParams {
+    google_id_token: String,
+}
+
+async fn login(
+    Extension(ref conn): Extension<DatabaseConnection>,
+    jar: PrivateCookieJar,
+    Json(params): Json<LoginParams>,
+) -> Result<impl IntoResponse> {
+    let claims = validate_token(&params.google_id_token).await?;
+
+    let user_id = UserGoogleLogin::find_by_id(claims.sub.clone())
+        .one(conn)
+        .await?
+        .map(|user_google_login| user_google_login.user)
+        .ok_or(Error::NoSuchAccount)?;
+    
+    do_login(user_id, jar)
+}
+
+#[derive(Debug, Deserialize)]
+struct SignupParams {
+    google_id_token: String,
+    username: String,
+}
+
+async fn signup(
+    Extension(ref conn): Extension<DatabaseConnection>,
+    jar: PrivateCookieJar,
+    Json(params): Json<SignupParams>,
+) -> Result<impl IntoResponse> {
+    let claims = validate_token(&params.google_id_token).await?;
+    validate_potential_username(&params.username)?;
+    let user_id = create_user(conn, claims.sub, params.username.clone()).await;
+    
+    match user_id {
+        Ok(user_id) => Ok(do_login(user_id, jar)?),
+        Err(e) => {
+            // Check whether we failed because the username was already taken
+            let existing = User::find()
+                .filter(user::Column::Username.eq(params.username))
+                .one(conn)
+                .await?;
+
+            if existing.is_some() {
+                Err(UsernameValidationError::AlreadyTaken)?
+            } else {
+                // ¯\_(ツ)_/¯
+                Err(e)?
+            }
+        }
+    }
+}
+
 async fn debug_login_cookie(jar: PrivateCookieJar) -> Result<impl IntoResponse> {
     let cookie = jar.get("login_cookie").ok_or(Error::Unauthorized)?;
     let cookie_data =
@@ -181,5 +249,6 @@ async fn debug_login_cookie(jar: PrivateCookieJar) -> Result<impl IntoResponse> 
 pub fn router() -> Router {
     Router::new()
         .route("/login", post(login))
+        .route("/signup", post(signup))
         .route("/debug_login_cookie", get(debug_login_cookie))
 }

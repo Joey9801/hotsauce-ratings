@@ -1,9 +1,5 @@
 <script setup>
 import IndexNav from "./components/IndexNav.vue";
-
-// import { provide, ref } from "vue";
-// const loginState = ref({ isLoggedIn: false, profile: null });
-// provide("loginState", loginState);
 </script>
 
 

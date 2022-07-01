@@ -238,6 +238,11 @@ async fn signup(
     }
 }
 
+async fn logout(jar: PrivateCookieJar) -> Result<impl IntoResponse> {
+    let jar = jar.remove(Cookie::named("login_cookie"));
+    Ok(jar)
+}
+
 async fn debug_login_cookie(jar: PrivateCookieJar) -> Result<impl IntoResponse> {
     let cookie = jar.get("login_cookie").ok_or(Error::Unauthorized)?;
     let cookie_data =
@@ -249,6 +254,7 @@ async fn debug_login_cookie(jar: PrivateCookieJar) -> Result<impl IntoResponse> 
 pub fn router() -> Router {
     Router::new()
         .route("/login", post(login))
+        .route("/logout", post(logout))
         .route("/signup", post(signup))
         .route("/debug_login_cookie", get(debug_login_cookie))
 }

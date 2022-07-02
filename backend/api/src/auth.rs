@@ -1,10 +1,13 @@
+use anyhow::anyhow;
 use axum::{
+    async_trait,
+    extract::{FromRequest, RequestParts},
     response::IntoResponse,
     routing::{get, post},
     Extension, Json, Router,
 };
 use axum_extra::extract::{
-    cookie::{Cookie, SameSite},
+    cookie::{Cookie, Key, SameSite},
     PrivateCookieJar,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -24,6 +27,8 @@ use crate::error::{Error, Result};
 
 const GOOGLE_CLIENT_ID: &'static str =
     "1029137063431-crnebmaeal8jdm85iurqoin9k6aqvccj.apps.googleusercontent.com";
+
+const LOGIN_COOKIE_NAME: &'static str = "login_cookie";
 
 #[derive(Debug, Error)]
 pub enum TokenValidationError {
@@ -163,7 +168,7 @@ fn do_login(user_id: i32, jar: PrivateCookieJar) -> Result<impl IntoResponse> {
         valid_until,
     };
 
-    let login_cookie = Cookie::build("login_cookie", cookie_data.encode_cookie_str())
+    let login_cookie = Cookie::build(LOGIN_COOKIE_NAME, cookie_data.encode_cookie_str())
         .http_only(true)
         .same_site(SameSite::Strict)
         .path("/api")
@@ -259,7 +264,7 @@ async fn signup(
         }
         Err(e) => {
             use entity::user::Column::*;
-    
+
             // Check whether we failed because the username was already taken
             let existing = User::find()
                 .filter(Username.eq(params.username))
@@ -277,12 +282,12 @@ async fn signup(
 }
 
 async fn logout(jar: PrivateCookieJar) -> Result<impl IntoResponse> {
-    let jar = jar.remove(Cookie::named("login_cookie"));
+    let jar = jar.remove(Cookie::named(LOGIN_COOKIE_NAME));
     Ok(jar)
 }
 
 async fn debug_login_cookie(jar: PrivateCookieJar) -> Result<impl IntoResponse> {
-    let cookie = jar.get("login_cookie").ok_or(Error::Unauthorized)?;
+    let cookie = jar.get(LOGIN_COOKIE_NAME).ok_or(Error::Unauthorized)?;
     let cookie_data =
         LoginCookieData::decode_cookie_str(cookie.value()).ok_or(Error::Unauthorized)?;
 
@@ -295,4 +300,34 @@ pub fn router() -> Router {
         .route("/logout", post(logout))
         .route("/signup", post(signup))
         .route("/debug_login_cookie", get(debug_login_cookie))
+}
+
+pub struct AuthenticatedUser {
+    pub user_id: i32,
+}
+
+#[async_trait]
+impl<B> FromRequest<B> for AuthenticatedUser
+where
+    B: Send,
+{
+    type Rejection = Error;
+
+    async fn from_request(req: &mut RequestParts<B>) -> std::result::Result<Self, Self::Rejection> {
+        let jar = PrivateCookieJar::<Key>::from_request(req)
+            .await
+            .map_err(|_| anyhow!("Failed to get PrivateCookieJar extension"))?;
+
+        let cookie = jar.get(LOGIN_COOKIE_NAME).ok_or(Error::Unauthorized)?;
+        let cookie_data =
+            LoginCookieData::decode_cookie_str(cookie.value()).ok_or(Error::Unauthorized)?;
+
+        if cookie_data.valid_until < Utc::now() {
+            Err(Error::Unauthorized)
+        } else {
+            Ok(AuthenticatedUser {
+                user_id: cookie_data.user_id,
+            })
+        }
+    }
 }

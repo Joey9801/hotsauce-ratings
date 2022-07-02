@@ -1,4 +1,4 @@
-use sea_orm_migration::{manager, prelude::*, sea_query::Table};
+use sea_orm_migration::{prelude::*, sea_query::Table};
 
 pub struct Migration;
 

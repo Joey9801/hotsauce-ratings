@@ -8,13 +8,15 @@ use axum_extra::extract::{
     PrivateCookieJar,
 };
 use chrono::{DateTime, Duration, Utc};
-use entity::{prelude::*, user};
+use entity::prelude::*;
 use jsonwebtoken::{
     decode_header,
     jwk::{AlgorithmParameters, JwkSet},
     DecodingKey, Validation,
 };
-use sea_orm::{ActiveModelTrait, DatabaseConnection, DbErr, EntityTrait, Set, ColumnTrait, QueryFilter};
+use sea_orm::{
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -49,6 +51,7 @@ pub struct Claims {
     pub name: String,
     pub given_name: String,
     pub family_name: String,
+    pub nonce: String,
 }
 
 async fn validate_token(token: &str) -> std::result::Result<Claims, TokenValidationError> {
@@ -82,6 +85,34 @@ async fn validate_token(token: &str) -> std::result::Result<Claims, TokenValidat
     let decoded = jsonwebtoken::decode::<Claims>(&token, &decoding_key, &validation)?;
 
     Ok(decoded.claims)
+}
+
+async fn is_nonce_unique(
+    conn: &DatabaseConnection,
+    nonce: String,
+    user_id: i32,
+) -> std::result::Result<bool, DbErr> {
+    use entity::used_nonce::Column::*;
+
+    let nonce_unique = UsedNonce::find()
+        .filter(Nonce.eq(nonce.clone()))
+        .filter(User.eq(user_id))
+        .one(conn)
+        .await?
+        .is_none();
+
+    if nonce_unique {
+        entity::used_nonce::ActiveModel {
+            nonce: Set(nonce),
+            user: Set(user_id),
+            used_at: Set(Utc::now()),
+            ..Default::default()
+        }
+        .insert(conn)
+        .await?;
+    }
+
+    Ok(nonce_unique)
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -156,32 +187,28 @@ pub enum UsernameValidationError {
 
     #[error("Usernames must contain only lowercase letters, numbers, hyphens, and underscores")]
     IllegalCharacters,
-    
+
     #[error("Username already in use")]
     AlreadyTaken,
 }
 
 fn validate_potential_username(username: &str) -> std::result::Result<(), UsernameValidationError> {
-    if username
-        .chars()
-        .any(|c| match c {
-            'a'..='z' | '0'..='9' | '-' | '_' => false,
-            _ => true
-        })
-    {
+    if username.chars().any(|c| match c {
+        'a'..='z' | '0'..='9' | '-' | '_' => false,
+        _ => true,
+    }) {
         return Err(UsernameValidationError::IllegalCharacters);
     }
-    
+
     if username.len() < MIN_USERNAME_LEN {
         return Err(UsernameValidationError::TooShort);
     }
     if username.len() > MAX_USERNAME_LEN {
         return Err(UsernameValidationError::TooLong);
     }
-        
+
     Ok(())
 }
-
 
 #[derive(Debug, Deserialize)]
 struct LoginParams {
@@ -200,8 +227,14 @@ async fn login(
         .await?
         .map(|user_google_login| user_google_login.user)
         .ok_or(Error::NoSuchAccount)?;
-    
-    do_login(user_id, jar)
+
+    let nonce_unique = is_nonce_unique(conn, claims.nonce, user_id).await?;
+
+    if nonce_unique {
+        do_login(user_id, jar)
+    } else {
+        Err(Error::ReusedNonce)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -218,13 +251,18 @@ async fn signup(
     let claims = validate_token(&params.google_id_token).await?;
     validate_potential_username(&params.username)?;
     let user_id = create_user(conn, claims.sub, params.username.clone()).await;
-    
+
     match user_id {
-        Ok(user_id) => Ok(do_login(user_id, jar)?),
+        Ok(user_id) => {
+            is_nonce_unique(conn, claims.nonce, user_id).await?;
+            Ok(do_login(user_id, jar)?)
+        }
         Err(e) => {
+            use entity::user::Column::*;
+    
             // Check whether we failed because the username was already taken
             let existing = User::find()
-                .filter(user::Column::Username.eq(params.username))
+                .filter(Username.eq(params.username))
                 .one(conn)
                 .await?;
 

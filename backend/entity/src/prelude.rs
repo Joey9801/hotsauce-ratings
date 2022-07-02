@@ -6,5 +6,6 @@ pub use super::review::Entity as Review;
 pub use super::review_rating::Entity as ReviewRating;
 pub use super::sauce::Entity as Sauce;
 pub use super::seaql_migrations::Entity as SeaqlMigrations;
+pub use super::used_nonce::Entity as UsedNonce;
 pub use super::user::Entity as User;
 pub use super::user_google_login::Entity as UserGoogleLogin;

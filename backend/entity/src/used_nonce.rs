@@ -4,11 +4,13 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
-#[sea_orm(table_name = "user_google_login")]
+#[sea_orm(table_name = "used_nonce")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
-    pub google_id: String,
+    pub nonce: String,
+    #[sea_orm(primary_key, auto_increment = false)]
     pub user: i32,
+    pub used_at: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

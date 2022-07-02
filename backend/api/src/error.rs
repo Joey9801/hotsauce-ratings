@@ -24,6 +24,9 @@ pub enum Error {
 
     #[error("No account exists for the given credentials")]
     NoSuchAccount,
+    
+    #[error("The given nonce has been seen before")]
+    ReusedNonce,
 
     #[error("Login required to perform this action")]
     Unauthorized,

@@ -22,7 +22,7 @@ export default {
                 response_type: "token id_token",
                 scope: "openid profile email",
                 state: "google",
-                nonce: "asdf",
+                nonce: Math.random().toString(16).substring(2),
             }
 
             var url = new URL(this.google_oidc_config.auth_endpoint);

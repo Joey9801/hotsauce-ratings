@@ -8,5 +8,6 @@ pub mod review;
 pub mod review_rating;
 pub mod sauce;
 pub mod seaql_migrations;
+pub mod used_nonce;
 pub mod user;
 pub mod user_google_login;

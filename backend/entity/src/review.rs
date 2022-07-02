@@ -10,7 +10,7 @@ pub struct Model {
     pub id: i32,
     pub sauce: i32,
     pub user: i32,
-    pub timestamp: String,
+    pub timestamp: DateTimeUtc,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

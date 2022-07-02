@@ -1,4 +1,4 @@
-use sea_orm_migration::{prelude::*, sea_query::Table};
+use sea_orm_migration::{manager, prelude::*, sea_query::Table};
 
 pub struct Migration;
 
@@ -13,6 +13,14 @@ pub enum User {
     Table,
     Id,
     Username,
+}
+
+#[derive(Iden)]
+pub enum UsedNonce {
+    Table,
+    Nonce,
+    User,
+    UsedAt,
 }
 
 #[derive(Iden)]
@@ -78,7 +86,30 @@ impl MigrationTrait for Migration {
                             .auto_increment()
                             .primary_key(),
                     )
-                    .col(ColumnDef::new(User::Username).string().not_null().unique_key())
+                    .col(
+                        ColumnDef::new(User::Username)
+                            .string()
+                            .not_null()
+                            .unique_key(),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(UsedNonce::Table)
+                    .col(ColumnDef::new(UsedNonce::Nonce).string().not_null())
+                    .col(ColumnDef::new(UsedNonce::User).integer().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .from(UsedNonce::Table, UsedNonce::User)
+                            .to(User::Table, User::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .col(ColumnDef::new(UsedNonce::UsedAt).timestamp_with_time_zone().not_null())
+                    .primary_key(Index::create().col(UsedNonce::Nonce).col(UsedNonce::User))
                     .to_owned(),
             )
             .await?;
@@ -97,7 +128,8 @@ impl MigrationTrait for Migration {
                     .foreign_key(
                         ForeignKey::create()
                             .from(UserGoogleLogin::Table, UserGoogleLogin::User)
-                            .to(User::Table, User::Id),
+                            .to(User::Table, User::Id)
+                            .on_delete(ForeignKeyAction::Cascade),
                     )
                     .to_owned(),
             )
@@ -245,6 +277,10 @@ impl MigrationTrait for Migration {
 
         manager
             .drop_table(Table::drop().table(UserGoogleLogin::Table).to_owned())
+            .await?;
+
+        manager
+            .drop_table(Table::drop().table(UsedNonce::Table).to_owned())
             .await?;
 
         manager

@@ -1,0 +1,2 @@
+database_uri = "sqlite://hotsauce.db"
+private_cookie_key = "asdf"

@@ -1,13 +1,12 @@
 use anyhow::anyhow;
 use axum::{
     async_trait,
-    extract::{FromRequest, RequestParts},
     response::IntoResponse,
     routing::{get, post},
-    Extension, Json, Router,
+    Extension, Json, Router, extract::{FromRequest, RequestParts},
 };
 use axum_extra::extract::{
-    cookie::{Cookie, Key, SameSite},
+    cookie::{Cookie, SameSite, Key},
     PrivateCookieJar,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -18,7 +17,7 @@ use jsonwebtoken::{
     DecodingKey, Validation,
 };
 use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, DbErr, EntityTrait, QueryFilter, Set,
+    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -96,7 +95,7 @@ async fn is_nonce_unique(
     conn: &DatabaseConnection,
     nonce: String,
     user_id: i32,
-) -> std::result::Result<bool, DbErr> {
+) -> Result<bool> {
     use entity::used_nonce::Column::*;
 
     let nonce_unique = UsedNonce::find()
@@ -141,7 +140,7 @@ async fn create_user(
     conn: &DatabaseConnection,
     google_id: String,
     username: String,
-) -> std::result::Result<i32, DbErr> {
+) -> Result<i32> {
     let new_user = entity::user::ActiveModel {
         username: Set(username),
         ..Default::default()

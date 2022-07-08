@@ -16,14 +16,14 @@ async fn sauce_list(
     Extension(ref conn): Extension<DatabaseConnection>,
     Query(query): Query<SaucesListQuery>,
 ) -> Result<impl IntoResponse> {
-    let mut find = Sauce::find();
-    
-    if let Some(manufacturer_id) = query.manufacturer_id {
-        find = find.filter(entity::sauce::Column::Manufacturer.eq(manufacturer_id));
-    }
+    use entity::sauce::Column::*;
 
+    let mut find = Sauce::find();
+    if let Some(manufacturer_id) = query.manufacturer_id {
+        find = find.filter(Manufacturer.eq(manufacturer_id));
+    }
     if let Some(sauce_id) = query.sauce_id {
-        find = find.filter(entity::sauce::Column::Id.eq(sauce_id));
+        find = find.filter(Id.eq(sauce_id));
     }
     
     find

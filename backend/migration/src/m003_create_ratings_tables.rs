@@ -16,6 +16,8 @@ pub enum RatingAxis {
     Table,
     Id,
     Name,
+    MinValue,
+    MaxValue,
     MinValueDesc,
     MaxValueDesc,
 }
@@ -27,6 +29,7 @@ pub enum Review {
     Sauce,
     User,
     Timestamp,
+    Text,
 }
 
 #[derive(Iden)]
@@ -53,6 +56,8 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(RatingAxis::Name).string().not_null())
+                    .col(ColumnDef::new(RatingAxis::MinValue).float().not_null())
+                    .col(ColumnDef::new(RatingAxis::MaxValue).float().not_null())
                     .col(ColumnDef::new(RatingAxis::MinValueDesc).string().not_null())
                     .col(ColumnDef::new(RatingAxis::MaxValueDesc).string().not_null())
                     .to_owned(),
@@ -83,6 +88,7 @@ impl MigrationTrait for Migration {
                             .to(User::Table, User::Id),
                     )
                     .col(ColumnDef::new(Review::Timestamp).timestamp().not_null())
+                    .col(ColumnDef::new(Review::Text).string())
                     .to_owned(),
             )
             .await?;

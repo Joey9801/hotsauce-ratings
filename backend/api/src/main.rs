@@ -111,6 +111,7 @@ async fn main() -> anyhow::Result<()> {
     );
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
+    log::info!("Starting up api server on {:?}", addr);
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await?;

@@ -3,4 +3,5 @@ members = [
     "entity",
     "migration",
     "api",
+    "testing_data",
 ]

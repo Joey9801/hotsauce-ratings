@@ -66,7 +66,11 @@ impl MigrationTrait for Migration {
                             .to(User::Table, User::Id)
                             .on_delete(ForeignKeyAction::Cascade),
                     )
-                    .col(ColumnDef::new(UsedNonce::UsedAt).timestamp_with_time_zone().not_null())
+                    .col(
+                        ColumnDef::new(UsedNonce::UsedAt)
+                            .timestamp_with_time_zone()
+                            .not_null(),
+                    )
                     .primary_key(Index::create().col(UsedNonce::Nonce).col(UsedNonce::User))
                     .to_owned(),
             )

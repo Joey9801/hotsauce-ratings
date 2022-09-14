@@ -1,12 +1,13 @@
 use anyhow::anyhow;
 use axum::{
     async_trait,
+    extract::{FromRequest, RequestParts},
     response::IntoResponse,
     routing::{get, post},
-    Extension, Json, Router, extract::{FromRequest, RequestParts},
+    Extension, Json, Router,
 };
 use axum_extra::extract::{
-    cookie::{Cookie, SameSite, Key},
+    cookie::{Cookie, Key, SameSite},
     PrivateCookieJar,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -16,9 +17,7 @@ use jsonwebtoken::{
     jwk::{AlgorithmParameters, JwkSet},
     DecodingKey, Validation,
 };
-use sea_orm::{
-    ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set,
-};
+use sea_orm::{ActiveModelTrait, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Set};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -91,11 +90,7 @@ async fn validate_token(token: &str) -> std::result::Result<Claims, TokenValidat
     Ok(decoded.claims)
 }
 
-async fn is_nonce_unique(
-    conn: &DatabaseConnection,
-    nonce: String,
-    user_id: i32,
-) -> Result<bool> {
+async fn is_nonce_unique(conn: &DatabaseConnection, nonce: String, user_id: i32) -> Result<bool> {
     use entity::used_nonce::Column::*;
 
     let nonce_unique = UsedNonce::find()

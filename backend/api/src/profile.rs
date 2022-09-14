@@ -1,8 +1,11 @@
-use axum::{Router, Extension, response::IntoResponse, routing::get, Json};
+use axum::{response::IntoResponse, routing::get, Extension, Json, Router};
 use entity::prelude::*;
 use sea_orm::{DatabaseConnection, EntityTrait};
 
-use crate::{error::{Result, Error}, auth::AuthenticatedUser};
+use crate::{
+    auth::AuthenticatedUser,
+    error::{Error, Result},
+};
 
 async fn basic_profile(
     auth: AuthenticatedUser,
@@ -12,12 +15,10 @@ async fn basic_profile(
         .one(conn)
         .await?
         .ok_or(Error::Unauthorized)?;
-        
+
     Ok(Json(user))
 }
 
-
 pub fn router() -> Router {
-    Router::new()
-        .route("/basic_profile", get(basic_profile))
+    Router::new().route("/basic_profile", get(basic_profile))
 }

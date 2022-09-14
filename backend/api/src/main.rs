@@ -1,13 +1,22 @@
 use std::{net::SocketAddr, time::Duration};
 
-use axum::{error_handling::HandleErrorLayer, http::{StatusCode, Request}, BoxError, Extension, Router, body::Body};
+use axum::{
+    body::Body,
+    error_handling::HandleErrorLayer,
+    http::{Request, StatusCode},
+    BoxError, Extension, Router,
+};
 use axum_extra::extract::cookie::Key as PrivateCookieKey;
 use config::Config;
 use http::header::HeaderName;
 use sea_orm::{ConnectOptions, Database};
 use serde::Deserialize;
 use tower::ServiceBuilder;
-use tower_http::{trace::{TraceLayer}, ServiceBuilderExt, request_id::{MakeRequestUuid, PropagateRequestIdLayer}};
+use tower_http::{
+    request_id::{MakeRequestUuid, PropagateRequestIdLayer},
+    trace::TraceLayer,
+    ServiceBuilderExt,
+};
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
 mod auth;
@@ -96,15 +105,15 @@ async fn main() -> anyhow::Result<()> {
             .layer(PropagateRequestIdLayer::new(x_request_id.clone()))
             .layer(HandleErrorLayer::new(handle_timeout_error))
             .timeout(Duration::from_secs(10))
-            .layer(TraceLayer::new_for_http()
-                .make_span_with(move |req: &Request<Body>| {
+            .layer(
+                TraceLayer::new_for_http().make_span_with(move |req: &Request<Body>| {
                     tracing::debug_span!(
                         "request",
                         uri = %req.uri(),
                         method = %req.method(),
                         request_id = ?req.headers()[&x_request_id]
                     )
-                })
+                }),
             )
             .layer(Extension(db))
             .layer(Extension(cookie_key)),

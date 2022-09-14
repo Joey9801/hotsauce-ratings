@@ -1,4 +1,4 @@
-use axum::{Extension, response::IntoResponse, Json, Router, routing::get, extract::Query};
+use axum::{extract::Query, response::IntoResponse, routing::get, Extension, Json, Router};
 use sea_orm::prelude::*;
 
 use entity::prelude::*;
@@ -25,15 +25,10 @@ async fn sauce_list(
     if let Some(sauce_id) = query.sauce_id {
         find = find.filter(Id.eq(sauce_id));
     }
-    
-    find
-        .all(conn)
-        .await
-        .map(|x| Json(x))
-        .map_err(Error::from)
+
+    find.all(conn).await.map(|x| Json(x)).map_err(Error::from)
 }
 
 pub fn router() -> Router {
-    Router::new()
-        .route("/sauce", get(sauce_list))
+    Router::new().route("/sauce", get(sauce_list))
 }

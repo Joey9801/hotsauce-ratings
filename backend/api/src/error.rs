@@ -1,6 +1,6 @@
 use axum::{http::StatusCode, response::IntoResponse, Json};
-use thiserror::Error;
 use serde_json::json;
+use thiserror::Error;
 
 use crate::auth::{TokenValidationError, UsernameValidationError};
 
@@ -18,13 +18,13 @@ pub enum Error {
 
     #[error("An error occured while validating a token")]
     TokenValidationError(#[from] TokenValidationError),
-    
+
     #[error("There was an issue with a potential new username")]
     UsernameValidationError(#[from] UsernameValidationError),
 
     #[error("No account exists for the given credentials")]
     NoSuchAccount,
-    
+
     #[error("The given nonce has been seen before")]
     ReusedNonce,
 
@@ -52,7 +52,7 @@ impl Error {
             _ => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
-    
+
     fn detailed_message(&self) -> Option<String> {
         match self {
             Error::UsernameValidationError(e) => Some(e.to_string()),
